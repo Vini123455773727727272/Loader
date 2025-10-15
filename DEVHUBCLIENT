@@ -1,0 +1,84 @@
+-- Loader de 2 scripts com whitelist
+-- Coloque esse LocalScript em StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+-- URLs dos scripts (não mexa aqui a menos que saiba o que faz)
+local SCRIPT_WHITELIST = "https://raw.githubusercontent.com/Vini123455773727727272/HubAdmin/refs/heads/main/paineltopzeratest.txt"
+local SCRIPT_DEFAULT   = "https://raw.githubusercontent.com/Vini123455773727727272/DevSla/refs/heads/main/DevHubClient.txt"
+
+-- Lista de whitelist (nomes de usuários Roblox)
+local whitelist = {
+    ["Vinilatas"] = true,
+    ["meliodas1wrt"] = true,
+    ["naosou_shscript"] = true,
+    ["deividiTaxas10000"] = true,
+}
+
+-- Controle de comportamento:
+-- true  -> players na whitelist recebem OS DOIS SCRIPTS (WHITELIST + DEFAULT)
+-- false -> players na whitelist recebem APENAS SCRIPT_WHITELIST, quem não for recebe SCRIPT_DEFAULT
+local openBothForWhitelist = true
+
+-- Função segura para baixar e executar um loadstring
+local function safeLoadAndRun(url)
+    if not url or url == "" then
+        warn("URL inválida para safeLoadAndRun")
+        return
+    end
+
+    local ok, response = pcall(function()
+        return game:HttpGet(url, true)
+    end)
+
+    if not ok then
+        warn("Falha ao HttpGet:", response)
+        return
+    end
+
+    local fnOk, fn = pcall(loadstring, response)
+    if not fnOk or type(fn) ~= "function" then
+        warn("Falha ao compilar loadstring do URL:", url)
+        return
+    end
+
+    local runOk, runErr = pcall(fn)
+    if not runOk then
+        warn("Erro ao executar o script carregado de:", url, "erro:", runErr)
+        return
+    end
+end
+
+-- Aguarda LocalPlayer estar disponível (segurança)
+if not player then
+    Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+    player = Players.LocalPlayer
+    if not player then
+        warn("LocalPlayer não encontrado.")
+        return
+    end
+end
+
+-- Normaliza nome (caso queira checar insensível a maiúsculas)
+local name = player.Name
+
+-- Decide o que carregar
+local isWhitelisted = whitelist[name] == true
+
+if isWhitelisted then
+    -- Fluxo para whitelist
+    if openBothForWhitelist then
+        -- Carrega os dois (primeiro whitelist, depois o default)
+        safeLoadAndRun(SCRIPT_WHITELIST)
+        -- Pequeno atraso para garantir ordem (opcional)
+        wait(0.25)
+        safeLoadAndRun(SCRIPT_DEFAULT)
+    else
+        -- Apenas o script da whitelist
+        safeLoadAndRun(SCRIPT_WHITELIST)
+    end
+else
+    -- Não é whitelist -> carrega apenas o default
+    safeLoadAndRun(SCRIPT_DEFAULT)
+end
